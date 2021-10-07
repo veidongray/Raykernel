@@ -9,34 +9,40 @@
 [global read_kernel]
 [global check_status]
 [global read_data]
+[global kernel_init]
 	
 bootloader_start:
 ;;==========Set GDT Start==========
 	mov bx, [gdt_base + code_base]
-	mov ax, 0x0
+	mov ax, cs
 	mov ds, ax
-	mov dword [ds:bx + 0x0], 0x0
-	mov dword [ds:bx + 0x4], 0x0
+	mov dword [bx], 0x0
+	add bx, 0x4
+	mov dword [bx], 0x0
 
-;;---Set BOOT Code Description---
-	mov dword [ds:bx + 0x8], 0x7c00ffff
-	mov dword [ds:bx + 0xc], 0x00c09800
+;;---Set Global Data Description---
+	add bx, 0x4
+	mov dword [bx], 0x0000ffff
+	add bx, 0x4
+	mov dword [bx], 0x00cf9200
 
 ;;---Set Videos Description---
-	mov dword [ds:bx + 0x10], 0x80000fa0
-	mov dword [ds:bx + 0x14], 0x0040920b
-
-;;---Set Kernel Code Loader Description---
-	mov dword [ds:bx + 0x18], 0x00000100
-	mov dword [ds:bx + 0x1c], 0x00c09210
-
-;;---Set Kernel Code Description---
-	mov dword [ds:bx + 0x20], 0x00000100
-	mov dword [ds:bx + 0x24], 0x00c09810
+	add bx, 0x4
+	mov dword [bx], 0x80000fa0
+	add bx, 0x4
+	mov dword [bx], 0x0040920b
 
 ;;---Set Stack Description---
-	mov dword [bx+0x28],0x00007a00
-	mov dword [bx+0x2c],0x00409600
+	add bx, 0x4
+	mov dword [bx], 0x7c007c00
+	add bx, 0x4
+	mov dword [bx], 0x004f9600
+
+;;---Set Code Description---
+	add bx, 0x4
+	mov dword [bx], 0x7c000200
+	add bx, 0x4
+	mov dword [bx], 0x00c09800
 ;;==========Set GDT End==========
 loader_gdt:
 	lgdt [cs:gdt_size + code_base]
@@ -56,9 +62,18 @@ open_pm32:
 	mov cr0, eax
 
 clean_flush:
-	jmp dword 0x0008:read_kernel
+	jmp dword 0x0020:kernel_init
 
 [bits 32]
+kernel_init:
+	mov ax, 0x0008
+	mov ds, ax
+	mov ax, 0x0010
+	mov es, ax
+	mov ax, 0x0018
+	mov ss, ax
+	mov sp, 0x
+
 read_kernel:
 	mov dx, 0x1f1
 	mov al, 0x0
@@ -66,9 +81,9 @@ read_kernel:
 	out dx, al
 
 	mov dx, 0x1f2
-	mov al, 0x08
-	out dx, al
 	mov al, 0x00
+	out dx, al
+	mov al, 0x01
 	out dx, al
 
 	mov dx, 0x1f3
@@ -105,30 +120,17 @@ check_status:
 	jnz check_status
 
 read_data:
-	mov dx, 0x1f0
-	mov ecx, 0x100
-	mov ebx, 0x0
-	mov ax, 0x18
-	mov ds, ax
-	.read_hhd:
-	in ax, dx
-	mov [ds:ebx], ax
-	add ebx, 0x2
-	loop .read_hhd
+	;;
 
 entry_32:
-	mov ax, 0x28
-	mov ss, ax
-	mov sp, 0x7c00
-	push 0x10
-	pop ax
-	mov es, ax
+	push eax
+	pop eax
 	mov byte [es:0x0], 'P'
 	mov byte [es:0x2], 'm'
 	mov byte [es:0x4], 'O'
 	mov byte [es:0x6], 'K'
 	
-	;jmp dword 0x0020:0x0000
+	;jmp far
 
 	hlt
 
