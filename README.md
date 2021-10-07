@@ -3,7 +3,7 @@ $ make          ## build os.bin
 
 $ make clean    ## clean build
 
-$ ./vhdtool -x ./bootloader.bin ./vhdpath
+$ ./vhdtool -x ./bootloader.bin [your vhdpath]
 
 # 环境
 nasm 2.14.02
