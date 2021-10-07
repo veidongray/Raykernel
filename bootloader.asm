@@ -19,13 +19,24 @@ bootloader_start:
 	mov dword [ds:bx + 0x4], 0x0
 
 ;;---Set BOOT Code Description---
-	mov dword [ds:bx + 0x8], 0x7c000200
-	mov dword [ds:bx + 0xc], 0x00409800
+	mov dword [ds:bx + 0x8], 0x7c00ffff
+	mov dword [ds:bx + 0xc], 0x00c09800
 
 ;;---Set Videos Description---
 	mov dword [ds:bx + 0x10], 0x80000fa0
-	mov dword [ds:bx + 0x14], 0x00c0920b
+	mov dword [ds:bx + 0x14], 0x0040920b
 
+;;---Set Kernel Code Loader Description---
+	mov dword [ds:bx + 0x18], 0x00000100
+	mov dword [ds:bx + 0x1c], 0x00c09210
+
+;;---Set Kernel Code Description---
+	mov dword [ds:bx + 0x20], 0x00000100
+	mov dword [ds:bx + 0x24], 0x00c09810
+
+;;---Set Stack Description---
+	mov dword [bx+0x28],0x00007a00
+	mov dword [bx+0x2c],0x00409600
 ;;==========Set GDT End==========
 loader_gdt:
 	lgdt [cs:gdt_size + code_base]
@@ -55,7 +66,7 @@ read_kernel:
 	out dx, al
 
 	mov dx, 0x1f2
-	mov al, 0x80
+	mov al, 0x08
 	out dx, al
 	mov al, 0x00
 	out dx, al
@@ -94,17 +105,31 @@ check_status:
 	jnz check_status
 
 read_data:
-	
+	mov dx, 0x1f0
+	mov ecx, 0x100
+	mov ebx, 0x0
+	mov ax, 0x18
+	mov ds, ax
+	.read_hhd:
+	in ax, dx
+	mov [ds:ebx], ax
+	add ebx, 0x2
+	loop .read_hhd
 
 entry_32:
-	mov ax, 0x10
+	mov ax, 0x28
+	mov ss, ax
+	mov sp, 0x7c00
+	push 0x10
+	pop ax
 	mov es, ax
 	mov byte [es:0x0], 'P'
 	mov byte [es:0x2], 'm'
 	mov byte [es:0x4], 'O'
 	mov byte [es:0x6], 'K'
-	mov ax, 0x10
-	mov ds, ax
+	
+	;jmp dword 0x0020:0x0000
+
 	hlt
 
 boot_flags:
@@ -114,7 +139,6 @@ lba_addr_16to23: equ 0000_0000B
 lba_addr_24to31: equ 0000_0000B
 lba_addr_32to39: equ 0000_0000B
 lba_addr_40to47: equ 0000_0000B
-
 code_base: equ 0x7c00
 gdt_size: dw 0xffff
 gdt_base: dd 0x00007e00
