@@ -1,5 +1,4 @@
-# RayOS
-# A simple OS.
+# RayOS: A simple OS.
 $ make          ## build os.bin
 
 $ make clean    ## clean build
