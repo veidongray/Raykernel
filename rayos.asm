@@ -13,6 +13,9 @@
 [global print]
 [global entry_kernel]
 
+close_irp:
+	cli
+
 bootloader_start:
 ;;==========Set GDT Start==========
 	mov bx, [gdt_base + code_base]
@@ -22,13 +25,13 @@ bootloader_start:
 	add bx, 0x4
 	mov dword [bx], 0x0
 
-;;---Set Global Data Description---
+;;---Set Global Data Description 4GB---
 	add bx, 0x4
 	mov dword [bx], 0x0000ffff
 	add bx, 0x4
 	mov dword [bx], 0x00cf9200
 
-;;---Set Videos Description---
+;;---Set Videos Description 4000Byte---
 	add bx, 0x4
 	mov dword [bx], 0x80000f9f
 	add bx, 0x4
@@ -40,7 +43,7 @@ bootloader_start:
 	add bx, 0x4
 	mov dword [bx], 0x00409200
 
-;;---Set Code Description---
+;;---Set Code Description 64kb---
 	add bx, 0x4
 	mov dword [bx], 0x7c00ffff
 	add bx, 0x4
@@ -51,12 +54,8 @@ loader_gdt:
 	
 open_a20:
 	mov dx, 0x92
-	in ax, dx
-	or ax, 0x2
-	out dx, ax
-
-close_irp:
-	cli
+	mov al, 0x2
+	out dx, al
 
 open_pm32:
 	mov eax, cr0
@@ -126,7 +125,7 @@ check_status:
 read_data:
 	mov ecx, 0x100
 	mov dx, 0x1f0
-	mov ebx, 0x8000
+	mov ebx, 0x100000
 	.s0:
 	in ax, dx
 	mov [ebx], ax
@@ -134,7 +133,7 @@ read_data:
 	loop .s0
 
 entry_kernel:
-	jmp dword 0x0020:0x8000 - code_base
+	jmp dword 0x0020:0x100000 - code_base
 	hlt
 
 boot_flags:
@@ -145,7 +144,7 @@ lba_addr_24to31: equ 0000_0000B
 lba_addr_32to39: equ 0000_0000B
 lba_addr_40to47: equ 0000_0000B
 code_base: equ 0x7c00
-gdt_size: dw 0xffff
+gdt_size: dw 0xff
 gdt_base: dd 0x00007e00
 
 bootloader_end:
@@ -158,10 +157,15 @@ print:
 
 	@s0:
 	mov byte [es:0x0], '@'
+	not byte [es:0x1]
 	mov byte [es:0x2], 'P'
+	not byte [es:0x3]
 	mov byte [es:0x4], 'm'
+	not byte [es:0x5]
 	mov byte [es:0x6], 'O'
+	not byte [es:0x7]
 	mov byte [es:0x8], 'K'
+	not byte [es:0x9]
 	loop @s0
 
 	hlt
