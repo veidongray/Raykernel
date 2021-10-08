@@ -28,19 +28,19 @@ bootloader_start:
 
 ;;---Set Videos Description---
 	add bx, 0x4
-	mov dword [bx], 0x80000fa0
+	mov dword [bx], 0x80000f9f
 	add bx, 0x4
 	mov dword [bx], 0x0040920b
 
 ;;---Set Stack Description---
 	add bx, 0x4
-	mov dword [bx], 0x7c007c00
+	mov dword [bx], 0x00007c00
 	add bx, 0x4
-	mov dword [bx], 0x004f9600
+	mov dword [bx], 0x00409200
 
 ;;---Set Code Description---
 	add bx, 0x4
-	mov dword [bx], 0x7c000200
+	mov dword [bx], 0x7c0001ff
 	add bx, 0x4
 	mov dword [bx], 0x00c09800
 ;;==========Set GDT End==========
@@ -72,7 +72,7 @@ kernel_init:
 	mov es, ax
 	mov ax, 0x0018
 	mov ss, ax
-	mov sp, 0x
+	mov esp, 0x7c00
 
 read_kernel:
 	mov dx, 0x1f1
