@@ -1,16 +1,18 @@
+[section bootloader align=16]
 [global bootloader_start]
 [global loader_gdt]
 [global open_pm32]
 [global close_irp]
 [global open_a20]
-[global entry_32]
 [global clean_flush]
 [global boot_flags]
 [global read_kernel]
 [global check_status]
 [global read_data]
 [global kernel_init]
-	
+[global print]
+[global entry_kernel]
+
 bootloader_start:
 ;;==========Set GDT Start==========
 	mov bx, [gdt_base + code_base]
@@ -40,9 +42,9 @@ bootloader_start:
 
 ;;---Set Code Description---
 	add bx, 0x4
-	mov dword [bx], 0x7c0001ff
+	mov dword [bx], 0x7c00ffff
 	add bx, 0x4
-	mov dword [bx], 0x00c09800
+	mov dword [bx], 0x00cf9800
 ;;==========Set GDT End==========
 loader_gdt:
 	lgdt [cs:gdt_size + code_base]
@@ -68,6 +70,8 @@ clean_flush:
 kernel_init:
 	mov ax, 0x0008
 	mov ds, ax
+	mov fs, ax
+	mov gs, ax
 	mov ax, 0x0010
 	mov es, ax
 	mov ax, 0x0018
@@ -120,18 +124,17 @@ check_status:
 	jnz check_status
 
 read_data:
-	;;
+	mov ecx, 0x100
+	mov dx, 0x1f0
+	mov ebx, 0x8000
+	.s0:
+	in ax, dx
+	mov [ebx], ax
+	add ebx, 0x2
+	loop .s0
 
-entry_32:
-	push eax
-	pop eax
-	mov byte [es:0x0], 'P'
-	mov byte [es:0x2], 'm'
-	mov byte [es:0x4], 'O'
-	mov byte [es:0x6], 'K'
-	
-	;jmp far
-
+entry_kernel:
+	jmp dword 0x0020:0x8000 - code_base
 	hlt
 
 boot_flags:
@@ -148,3 +151,17 @@ gdt_base: dd 0x00007e00
 bootloader_end:
 	times 510-($-$$) db 0x0
 	db 0x55, 0xaa
+
+print:
+	push eax
+	pop eax
+
+	@s0:
+	mov byte [es:0x0], '@'
+	mov byte [es:0x2], 'P'
+	mov byte [es:0x4], 'm'
+	mov byte [es:0x6], 'O'
+	mov byte [es:0x8], 'K'
+	loop @s0
+
+	hlt
