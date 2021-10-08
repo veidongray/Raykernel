@@ -43,11 +43,17 @@ bootloader_start:
 	add bx, 0x4
 	mov dword [bx], 0x00409200
 
-;;---Set Code Description 64kb---
+;;---Set BOOT Code Description 8mb---
 	add bx, 0x4
-	mov dword [bx], 0x7c00ffff
+	mov dword [bx], 0x7c0001ff
 	add bx, 0x4
-	mov dword [bx], 0x00cf9800
+	mov dword [bx], 0x00409800
+
+;;---Set Kernel Code Description 8mb---
+	add bx, 0x4
+	mov dword [bx], 0x0000feff
+	add bx, 0x4
+	mov dword [bx], 0x00cf9810
 ;;==========Set GDT End==========
 loader_gdt:
 	lgdt [cs:gdt_size + code_base]
@@ -133,7 +139,7 @@ read_data:
 	loop .s0
 
 entry_kernel:
-	jmp dword 0x0020:0x100000 - code_base
+	jmp dword 0x0028:0x0
 	hlt
 
 boot_flags:
@@ -169,3 +175,4 @@ print:
 	loop @s0
 
 	hlt
+show_str0: db 'Welcome to RayOS!'
