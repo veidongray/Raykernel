@@ -156,23 +156,3 @@ gdt_base: dd 0x00007e00
 bootloader_end:
 	times 510-($-$$) db 0x0
 	db 0x55, 0xaa
-
-print:
-	push eax
-	pop eax
-
-	@s0:
-	mov byte [es:0x0], '@'
-	not byte [es:0x1]
-	mov byte [es:0x2], 'P'
-	not byte [es:0x3]
-	mov byte [es:0x4], 'm'
-	not byte [es:0x5]
-	mov byte [es:0x6], 'O'
-	not byte [es:0x7]
-	mov byte [es:0x8], 'K'
-	not byte [es:0x9]
-	loop @s0
-
-	hlt
-show_str0: db 'Welcome to RayOS!'
