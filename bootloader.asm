@@ -6,7 +6,7 @@
 ;;	描述附表 0x7e00~0x17e00：
 ;;		全局数据段描述符： 0x0~0xffffffff 共 4GB
 ;;		BootLoader段描述符： 0x7c00~0x7dff 共 512Byte
-;;		堆栈描述符： 0x100000~0x1fffff 共 1MB
+;;		堆栈描述符： 0x0~0x7bff 共 31KB
 ;;		内核代码段描述符： 0x200000~0x5fffff 共 4MB
 ;;
 ;;	内核加载到：0x200000.
@@ -42,8 +42,8 @@ create_global_descriptions:
 	mov dword [bx + 0xc], 0x00409800
 
 	;; stack description
-	mov dword [bx + 0x10], 0x0000ffff
-	mov dword [bx + 0x14], 0x004f9210
+	mov dword [bx + 0x10], 0x00007bff
+	mov dword [bx + 0x14], 0x00409200
 
 	;; global data description
 	mov dword [bx + 0x18], 0x0000ffff
@@ -79,7 +79,7 @@ entry_32mode:
 kernel_init:
 	mov ax, 0x0010
 	mov ss, ax
-	mov esp, 0x100000
+	mov esp, 0x7c00
 	mov ax, 0x0018
 	mov ds, ax
 	mov es, ax
