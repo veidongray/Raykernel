@@ -1,116 +1,120 @@
+;;+++++++++++++++++++++++++++++++
+;;	bootloader.asm
+;;
+;;	加载内核，创建全局描述附表
+;;
+;;	描述附表 0x7e00~0x17e00：
+;;		全局数据段描述符： 0x0~0xffffffff 共 4GB
+;;		BootLoader段描述符： 0x7c00~0x7dff 共 512Byte
+;;		堆栈描述符： 0x100000~0x1fffff 共 1MB
+;;		内核代码段描述符： 0x200000~0x5fffff 共 4MB
+;;
+;;	内核加载到：0x200000.
+;;	硬盘读写使用 48 BIT 模式读写.
+;;+++++++++++++++++++++++++++++++
 [section bootloader align=16]
 [global bootloader_start]
-[global loader_gdt]
-[global open_pm32]
+[global bootloader_end]
 [global close_irp]
+[global create_global_descriptions]
 [global open_a20]
-[global clean_flush]
-[global boot_flags]
-[global read_kernel]
-[global check_status]
-[global read_data]
+[global setup_gdt]
+[global open_pm32]
 [global kernel_init]
-[global print]
+[global entry_32mode]
+[global loader_kernel]
 [global entry_kernel]
-
+bootloader_start:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 close_irp:
 	cli
+;; close_irp_end
 
-bootloader_start:
-;;==========Set GDT Start==========
-	mov bx, [gdt_base + code_base]
-	mov ax, cs
-	mov ds, ax
-	mov dword [bx], 0x0
-	add bx, 0x4
-	mov dword [bx], 0x0
+create_global_descriptions:
+	mov bx, [cs:gdt_base + 0x7c00]
 
-;;---Set Global Data Description 4GB---
-	add bx, 0x4
-	mov dword [bx], 0x0000ffff
-	add bx, 0x4
-	mov dword [bx], 0x00cf9200
+	;; empty description
+	mov dword [bx + 0x0], 0x0
+	mov dword [bx + 0x4], 0x0
 
-;;---Set Videos Description 4000Byte---
-	add bx, 0x4
-	mov dword [bx], 0x80000f9f
-	add bx, 0x4
-	mov dword [bx], 0x0040920b
+	;; bootloader code description
+	mov dword [bx + 0x8], 0x7c0001ff
+	mov dword [bx + 0xc], 0x00409800
 
-;;---Set Stack Description---
-	add bx, 0x4
-	mov dword [bx], 0x00007c00
-	add bx, 0x4
-	mov dword [bx], 0x00409200
+	;; stack description
+	mov dword [bx + 0x10], 0x0000ffff
+	mov dword [bx + 0x14], 0x004f9210
 
-;;---Set BOOT Code Description 8mb---
-	add bx, 0x4
-	mov dword [bx], 0x7c0001ff
-	add bx, 0x4
-	mov dword [bx], 0x00409800
+	;; global data description
+	mov dword [bx + 0x18], 0x0000ffff
+	mov dword [bx + 0x1c], 0x00cf9200
 
-;;---Set Kernel Code Description 8mb---
-	add bx, 0x4
-	mov dword [bx], 0x0000feff
-	add bx, 0x4
-	mov dword [bx], 0x00cf9810
-;;==========Set GDT End==========
-loader_gdt:
-	lgdt [cs:gdt_size + code_base]
-	
+	;; kernel description
+	mov dword [bx + 0x20], 0x00000400
+	mov dword [bx + 0x24], 0x00c09820
+;; create_global_descriptions_end
+
 open_a20:
 	mov dx, 0x92
-	mov al, 0x2
+	in al, dx
+	or al, 0x2
 	out dx, al
+;; open_a20_end
+
+setup_gdt:
+	lgdt [ds:gdt_size + 0x7c00]
+;; setup_gdt_end
 
 open_pm32:
 	mov eax, cr0
 	or eax, 0x1
 	mov cr0, eax
+;; open_pm32_end
 
-clean_flush:
-	jmp dword 0x0020:kernel_init
+entry_32mode:
+	jmp dword 0x0008:kernel_init
+;; entry_32mode_end
 
 [bits 32]
 kernel_init:
-	mov ax, 0x0008
+	mov ax, 0x0010
+	mov ss, ax
+	mov esp, 0x100000
+	mov ax, 0x0018
 	mov ds, ax
+	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	mov ax, 0x0010
-	mov es, ax
-	mov ax, 0x0018
-	mov ss, ax
-	mov esp, 0x7c00
+;; kernel_init_end
 
-read_kernel:
+loader_kernel:
 	mov dx, 0x1f1
 	mov al, 0x0
 	out dx, al
 	out dx, al
 
 	mov dx, 0x1f2
-	mov al, 0x00
+	mov al, 0x20
 	out dx, al
-	mov al, 0x01
+	mov al, 0x00
 	out dx, al
 
 	mov dx, 0x1f3
-	mov al, lba_addr_24to31
+	mov al, 0x0
 	out dx, al
-	mov al, lba_addr_0to7
+	mov al, 0x1
 	out dx, al
 
 	mov dx, 0x1f4
-	mov al, lba_addr_32to39
+	mov al, 0x0
 	out dx, al
-	mov al, lba_addr_8to15
+	mov al, 0x0
 	out dx, al
 
 	mov dx, 0x1f5
-	mov al, lba_addr_40to47
+	mov al, 0x0
 	out dx, al
-	mov al, lba_addr_16to23
+	mov al, 0x0
 	out dx, al
 
 	mov dx, 0x1f6
@@ -121,38 +125,30 @@ read_kernel:
 	mov al, 0x24
 	out dx, al
 
-check_status:
+	@check_status:
 	mov dx, 0x1f7
 	in al, dx
 	and al, 0x88
 	cmp al, 0x08
-	jnz check_status
+	jnz @check_status
 
-read_data:
-	mov ecx, 0x100
+	mov ecx, 0x200000
 	mov dx, 0x1f0
-	mov ebx, 0x100000
-	.s0:
+	mov ebx, 0x200000
+	@read_data:
 	in ax, dx
 	mov [ebx], ax
 	add ebx, 0x2
-	loop .s0
+	loop @read_data
+;; read_kernel_end
 
 entry_kernel:
-	jmp dword 0x0028:0x0
-	hlt
+	jmp dword 0x0020:0x0
+;; entry_kernel_end
 
-boot_flags:
-lba_addr_0to7: equ 0000_0001B
-lba_addr_8to15: equ 0000_0000B
-lba_addr_16to23: equ 0000_0000B
-lba_addr_24to31: equ 0000_0000B
-lba_addr_32to39: equ 0000_0000B
-lba_addr_40to47: equ 0000_0000B
-code_base: equ 0x7c00
-gdt_size: dw 0xff
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+gdt_size: dw 0xffff
 gdt_base: dd 0x00007e00
-
 bootloader_end:
-	times 510-($-$$) db 0x0
+	times 510 - ($-$$) db 0x0
 	db 0x55, 0xaa
