@@ -5,12 +5,12 @@ $ make clean    ## clean build
 
 $ ./vhdtool -x ./bootloader.bin [your vhdpath]
 
-# 环境
+# Environment
 nasm 2.14.02
 
 gcc 9.3.0
 
 Ubuntu 20.04 LTS
 
-# 协议
-使用时请遵守GPLv3协议。
+# Protocol
+GPLv3.
